@@ -2,7 +2,9 @@ package daemon
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -94,6 +96,84 @@ printf '%%s\n' '{"latitude":1.0,"longitude":2.0}'
 	}
 }
 
+func TestSIGUSR1ForcesRecompression(t *testing.T) {
+	dir := t.TempDir()
+	outputPath := filepath.Join(dir, "data.bin")
+
+	records := []storage.Record{
+		func() storage.Record {
+			rec := storage.NewRecordWithMissing(time.Unix(1711449600, 0).UTC())
+			rec.Latitude = 1
+			rec.Longitude = 2
+			return rec
+		}(),
+		func() storage.Record {
+			rec := storage.NewRecordWithMissing(time.Unix(1711449660, 0).UTC())
+			rec.Latitude = 3
+			rec.Longitude = 4
+			return rec
+		}(),
+		func() storage.Record {
+			rec := storage.NewRecordWithMissing(time.Unix(1711449720, 0).UTC())
+			rec.Latitude = 5
+			rec.Longitude = 6
+			return rec
+		}(),
+	}
+	if err := storage.WriteAllCompressed(outputPath, records, 1); err != nil {
+		t.Fatalf("WriteAllCompressed returned error: %v", err)
+	}
+
+	cfg := Config{
+		Interval:      100 * time.Millisecond,
+		BufferSize:    50,
+		OutputPath:    outputPath,
+		CompactAfter:  100,
+		LocationCmd:   "false",
+		SampleTimeout: 2 * time.Second,
+		PendingCap:    500,
+		LockPath:      filepath.Join(dir, "daemon.lock"),
+		PIDPath:       filepath.Join(dir, "daemon.pid"),
+		LogPath:       filepath.Join(dir, "daemon.log"),
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- Run(ctx, cfg)
+	}()
+
+	if err := waitForFileExists(cfg.PIDPath, 3*time.Second); err != nil {
+		cancel()
+		t.Fatalf("pid file was not created: %v", err)
+	}
+
+	if err := waitForBlockCountEquals(outputPath, 3, 3*time.Second); err != nil {
+		cancel()
+		t.Fatalf("initial block count check failed: %v", err)
+	}
+
+	if err := syscall.Kill(os.Getpid(), syscall.SIGUSR1); err != nil {
+		cancel()
+		t.Fatalf("send SIGUSR1 failed: %v", err)
+	}
+
+	if err := waitForBlockCountEquals(outputPath, 1, 4*time.Second); err != nil {
+		cancel()
+		t.Fatalf("forced recompression did not happen: %v", err)
+	}
+
+	cancel()
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Run returned error: %v", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timed out waiting for Run to stop")
+	}
+}
+
 func waitForCounterAtLeast(path string, target int, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
@@ -119,4 +199,57 @@ func waitForRecordCountAtLeast(path string, target int, timeout time.Duration) e
 		time.Sleep(20 * time.Millisecond)
 	}
 	return context.DeadlineExceeded
+}
+
+func waitForBlockCountEquals(path string, expected int, timeout time.Duration) error {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		count, err := blockCountForSignalTest(path)
+		if err == nil && count == expected {
+			return nil
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	return context.DeadlineExceeded
+}
+
+func blockCountForSignalTest(path string) (int, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return 0, err
+	}
+	defer file.Close()
+
+	magic := make([]byte, len(storage.FileMagic))
+	if _, err := io.ReadFull(file, magic); err != nil {
+		return 0, err
+	}
+	if string(magic) != storage.FileMagic {
+		return 0, fmt.Errorf("invalid magic %q", string(magic))
+	}
+
+	count := 0
+	header := make([]byte, 12)
+	for {
+		if _, err := io.ReadFull(file, header); err != nil {
+			if err == io.EOF {
+				break
+			}
+			if err == io.ErrUnexpectedEOF {
+				return 0, err
+			}
+			return 0, err
+		}
+
+		compressedLen := binary.LittleEndian.Uint32(header[0:4])
+		if compressedLen == 0 {
+			return 0, fmt.Errorf("invalid block length 0")
+		}
+
+		if _, err := file.Seek(int64(compressedLen), io.SeekCurrent); err != nil {
+			return 0, err
+		}
+		count++
+	}
+	return count, nil
 }

@@ -76,10 +76,13 @@ func Run(ctx context.Context, cfg Config) error {
 
 	termSignals := make(chan os.Signal, 1)
 	hupSignals := make(chan os.Signal, 1)
+	usr1Signals := make(chan os.Signal, 1)
 	signal.Notify(termSignals, syscall.SIGINT, syscall.SIGTERM)
 	signal.Notify(hupSignals, syscall.SIGHUP)
+	signal.Notify(usr1Signals, syscall.SIGUSR1)
 	defer signal.Stop(termSignals)
 	defer signal.Stop(hupSignals)
+	defer signal.Stop(usr1Signals)
 
 	pending := make([]storage.Record, 0, cfg.BufferSize)
 	flushesSinceCompact := 0
@@ -111,6 +114,16 @@ func Run(ctx context.Context, cfg Config) error {
 		case <-hupSignals:
 			if err := flushPending("sighup"); err != nil {
 				logger.Logf("flush on SIGHUP failed: %v", err)
+			}
+		case <-usr1Signals:
+			if err := flushPending("sigusr1-flush"); err != nil {
+				logger.Logf("flush on SIGUSR1 failed: %v", err)
+				continue
+			}
+			if err := storage.Compact(cfg.OutputPath); err != nil {
+				logger.Logf("compact on SIGUSR1 failed: %v", err)
+			} else {
+				flushesSinceCompact = 0
 			}
 		case <-ticker.C:
 			rec, err := sampleOnce(ctx, cfg.LocationCmd, cfg.SampleTimeout)
