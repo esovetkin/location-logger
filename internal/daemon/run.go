@@ -36,10 +36,7 @@ func Start(cfg Config) error {
 		}
 		return nil
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-	return Run(ctx, cfg)
+	return Run(context.Background(), cfg)
 }
 
 func Run(ctx context.Context, cfg Config) error {
@@ -77,6 +74,13 @@ func Run(ctx context.Context, cfg Config) error {
 	ticker := time.NewTicker(cfg.Interval)
 	defer ticker.Stop()
 
+	termSignals := make(chan os.Signal, 1)
+	hupSignals := make(chan os.Signal, 1)
+	signal.Notify(termSignals, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(hupSignals, syscall.SIGHUP)
+	defer signal.Stop(termSignals)
+	defer signal.Stop(hupSignals)
+
 	pending := make([]storage.Record, 0, cfg.BufferSize)
 	flushesSinceCompact := 0
 
@@ -99,6 +103,15 @@ func Run(ctx context.Context, cfg Config) error {
 				return err
 			}
 			return nil
+		case <-termSignals:
+			if err := flushPending("shutdown-signal"); err != nil {
+				return err
+			}
+			return nil
+		case <-hupSignals:
+			if err := flushPending("sighup"); err != nil {
+				logger.Logf("flush on SIGHUP failed: %v", err)
+			}
 		case <-ticker.C:
 			rec, err := sampleOnce(ctx, cfg.LocationCmd, cfg.SampleTimeout)
 			if err != nil {
