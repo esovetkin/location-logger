@@ -55,6 +55,9 @@ func runDaemon(args []string) error {
 	compactAfter := fs.Int("compact-after", 100, "number of successful batch appends between compactions")
 	fs.IntVar(compactAfter, "c", 100, "number of successful batch appends between compactions")
 
+	sampleTimeout := fs.Int("sample-timeout", 40, "timeout for the location-cmd")
+	fs.IntVar(sampleTimeout, "t", 40, "timeout for the location-cmd")
+
 	locationCmd := fs.String("location-cmd", "termux-location", "location command to execute")
 
 	if err := fs.Parse(args); err != nil {
@@ -74,6 +77,10 @@ func runDaemon(args []string) error {
 		return errors.New("--compact-after must be greater than zero")
 	}
 
+	if *sampleTimeout <= 0 {
+		return errors.New("--sample-timeout must be greater than zero")
+	}
+
 	resolvedOutput, err := paths.Expand(*outputPath)
 	if err != nil {
 		return err
@@ -89,7 +96,7 @@ func runDaemon(args []string) error {
 		OutputPath:    resolvedOutput,
 		CompactAfter:  *compactAfter,
 		LocationCmd:   *locationCmd,
-		SampleTimeout: 20 * time.Second,
+		SampleTimeout: time.Duration(*sampleTimeout) * time.Second,
 		PendingCap:    *bufferSize * 10,
 		LockPath:      runtimePaths.LockFile,
 		PIDPath:       runtimePaths.PIDFile,
@@ -151,7 +158,7 @@ func usageError() error {
 
 func usageText() string {
 	return `Usage:
-  location-logger daemon [--interval 60] [--buffer-size 20] [--output ~/.location_logger/data.bin] [--compact-after 100] [--location-cmd "termux-location"]
+  location-logger daemon [--interval 60] [--buffer-size 20] [--output ~/.location_logger/data.bin] [--compact-after 100] [--sample-timeout 40] [--location-cmd "termux-location"]
   location-logger export [--input ~/.location_logger/data.bin] [--output /path/to/output.csv]
 
 Commands:
