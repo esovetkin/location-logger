@@ -15,12 +15,7 @@ go build -o location-logger ./cmd/location-logger
 Runs a detached background daemon that calls `termux-location` on an interval.
 
 ```bash
-./location-logger daemon \
-  --interval 60 \
-  --buffer-size 20 \
-  --output ~/.location_logger/data.bin \
-  --compact-after 100 \
-  --location-cmd "termux-location"
+./location-logger daemon
 ```
 
 Flags:
@@ -28,7 +23,9 @@ Flags:
 - `--buffer-size, -b` successful samples per append (default `20`)
 - `--output, -o` binary output path (default `~/.location_logger/data.bin`)
 - `--compact-after, -c` successful batch appends before full compaction (default `100`)
-- `--location-cmd` command used to query location (default `termux-location`)
+- `--location-cmd` command used to query location (default `termux-location -p passive -r last`)
+
+By default `termux-location -p passive -r last` is called periodically. Go to "Settings" -> "Location" -> "Termux:API" and set "Allow all the time" to avoid lots of missing values.
 
 ### `export`
 

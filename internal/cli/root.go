@@ -58,7 +58,7 @@ func runDaemon(args []string) error {
 	sampleTimeout := fs.Int("sample-timeout", 40, "timeout for the location-cmd")
 	fs.IntVar(sampleTimeout, "t", 40, "timeout for the location-cmd")
 
-	locationCmd := fs.String("location-cmd", "termux-location", "location command to execute")
+	locationCmd := fs.String("location-cmd", "termux-location -p passive -r last", "location command to execute")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -158,7 +158,7 @@ func usageError() error {
 
 func usageText() string {
 	return `Usage:
-  location-logger daemon [--interval 60] [--buffer-size 20] [--output ~/.location_logger/data.bin] [--compact-after 100] [--sample-timeout 40] [--location-cmd "termux-location"]
+  location-logger daemon [--interval 60] [--buffer-size 20] [--output ~/.location_logger/data.bin] [--compact-after 100] [--sample-timeout 40] [--location-cmd "termux-location -p passive -r last"]
   location-logger export [--input ~/.location_logger/data.bin] [--output /path/to/output.csv]
 
 Commands:
