@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"time"
 
-	"location_logger/internal/storage"
+	"github.com/esovetkin/location-logger/internal/storage"
 )
 
 type termuxLocation struct {

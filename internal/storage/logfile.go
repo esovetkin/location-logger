@@ -7,7 +7,7 @@ import (
 	"io"
 	"os"
 
-	"location_logger/internal/paths"
+	"github.com/esovetkin/location-logger/internal/paths"
 )
 
 const blockHeaderSize = 12

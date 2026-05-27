@@ -1,11 +1,17 @@
-# location_logger
+# location-logger
 
 A Go CLI for logging phone location data from Termux and exporting to CSV.
+
+## Install
+
+```bash
+go install github.com/esovetkin/location-logger@latest
+```
 
 ## Build
 
 ```bash
-go build -o location-logger ./cmd/location-logger
+go build -o location-logger .
 ```
 
 ## Commands

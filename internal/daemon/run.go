@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"location_logger/internal/paths"
-	"location_logger/internal/storage"
+	"github.com/esovetkin/location-logger/internal/paths"
+	"github.com/esovetkin/location-logger/internal/storage"
 )
 
 const childEnv = "LOCATION_LOGGER_DAEMON_CHILD"

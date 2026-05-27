@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"location_logger/internal/daemon"
-	exporter "location_logger/internal/export"
-	"location_logger/internal/paths"
+	"github.com/esovetkin/location-logger/internal/daemon"
+	exporter "github.com/esovetkin/location-logger/internal/export"
+	"github.com/esovetkin/location-logger/internal/paths"
 )
 
 func Run(args []string) error {

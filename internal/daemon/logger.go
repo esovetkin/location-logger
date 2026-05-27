@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"location_logger/internal/paths"
+	"github.com/esovetkin/location-logger/internal/paths"
 )
 
 type daemonLogger struct {

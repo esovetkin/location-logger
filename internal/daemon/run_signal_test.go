@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"location_logger/internal/storage"
+	"github.com/esovetkin/location-logger/internal/storage"
 )
 
 func TestSIGHUPFlushesPendingBuffer(t *testing.T) {

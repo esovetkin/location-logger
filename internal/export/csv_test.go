@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"location_logger/internal/storage"
+	"github.com/esovetkin/location-logger/internal/storage"
 )
 
 func TestExportWritesNaNAndEmptyCells(t *testing.T) {

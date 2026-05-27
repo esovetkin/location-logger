@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	exporter "location_logger/internal/export"
-	"location_logger/internal/storage"
+	exporter "github.com/esovetkin/location-logger/internal/export"
+	"github.com/esovetkin/location-logger/internal/storage"
 )
 
 func TestDaemonIntegrationBufferingCompactionAndExport(t *testing.T) {
