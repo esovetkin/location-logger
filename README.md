@@ -18,13 +18,14 @@ go build -o location-logger .
 
 ### `daemon`
 
-Runs a detached background daemon that calls `termux-location` on an interval.
+Runs a daemon that calls `termux-location` on an interval. By default it detaches into the background.
 
 ```bash
 ./location-logger daemon
 ```
 
 Flags:
+- `--fg` run in foreground instead of detaching
 - `--interval, -i` seconds between samples (default `60`)
 - `--buffer-size, -b` successful samples per append (default `20`)
 - `--output, -o` binary output path (default `~/.location_logger/data.bin`)
@@ -32,6 +33,17 @@ Flags:
 - `--location-cmd` command used to query location (default `termux-location -p passive -r last`)
 
 By default `termux-location -p passive -r last` is called periodically. Go to "Settings" -> "Location" -> "Termux:API" and set "Allow all the time" to avoid lots of missing values.
+
+## Running Under `sv`
+
+Use `--fg` so the supervised process stays in the foreground.
+
+```sh
+#!/bin/sh
+exec location-logger daemon --fg
+```
+
+Normal terminal usage can omit `--fg`; supervised services should include it.
 
 ### `export`
 

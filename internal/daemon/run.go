@@ -27,16 +27,21 @@ type Config struct {
 	LockPath      string
 	PIDPath       string
 	LogPath       string
+	Foreground    bool
 }
 
 func Start(cfg Config) error {
-	if os.Getenv(childEnv) != "1" {
+	if shouldDetach(cfg, os.Getenv(childEnv)) {
 		if err := ensureDetached(); err != nil {
 			return err
 		}
 		return nil
 	}
 	return Run(context.Background(), cfg)
+}
+
+func shouldDetach(cfg Config, envValue string) bool {
+	return !cfg.Foreground && envValue != "1"
 }
 
 func Run(ctx context.Context, cfg Config) error {

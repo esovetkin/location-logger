@@ -52,6 +52,28 @@ func TestPIDFileLifecycle(t *testing.T) {
 	}
 }
 
+func TestShouldDetach(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  Config
+		env  string
+		want bool
+	}{
+		{"default parent detaches", Config{}, "", true},
+		{"foreground parent does not detach", Config{Foreground: true}, "", false},
+		{"detached child does not detach again", Config{}, "1", false},
+		{"foreground child does not detach", Config{Foreground: true}, "1", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := shouldDetach(tt.cfg, tt.env); got != tt.want {
+				t.Fatalf("shouldDetach() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func waitForFileExists(path string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
